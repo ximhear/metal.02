@@ -8,14 +8,20 @@
 import SwiftUI
 
 struct ContentView: View {
+    @State private var projectionMode: MetalView.ProjectionMode = .perspective
+    
     var body: some View {
         VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+            MetalView(projectionMode: $projectionMode)
+                .ignoresSafeArea()
+            
+            Picker("Projection", selection: $projectionMode) {
+                Text("Perspective").tag(MetalView.ProjectionMode.perspective)
+                Text("Orthographic").tag(MetalView.ProjectionMode.orthographic)
+            }
+            .pickerStyle(SegmentedPickerStyle())
+            .padding()
         }
-        .padding()
     }
 }
 
