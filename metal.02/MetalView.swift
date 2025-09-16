@@ -212,14 +212,15 @@ struct MetalView: UIViewRepresentable {
                                            length: indices.count * MemoryLayout<UInt16>.size,
                                            options: [])
 
-            // Use actual struct size to ensure proper alignment
+            // Define Uniforms struct to match Metal shader
             struct Uniforms {
-                var modelMatrix: float4x4
-                var viewMatrix: float4x4
-                var projectionMatrix: float4x4
-                var time: Float
-                var padding: SIMD3<Float> = SIMD3<Float>(0, 0, 0)
-            }
+                var modelMatrix: float4x4      // 64 bytes
+                var viewMatrix: float4x4       // 64 bytes
+                var projectionMatrix: float4x4  // 64 bytes
+                var time: Float                // 4 bytes
+                var padding: SIMD3<Float> = SIMD3<Float>(0, 0, 0)  // 12 bytes
+                var padding2: SIMD4<Float> = SIMD4<Float>(0, 0, 0, 0)  // 16 bytes
+            }  // Total: 224 bytes
 
             let uniformsSize = MemoryLayout<Uniforms>.stride  // Use stride for proper alignment
             uniformBuffer = device.makeBuffer(length: uniformsSize, options: [])
@@ -257,6 +258,7 @@ struct MetalView: UIViewRepresentable {
                 var projectionMatrix: float4x4
                 var time: Float
                 var padding: SIMD3<Float> = SIMD3<Float>(0, 0, 0)
+                var padding2: SIMD4<Float> = SIMD4<Float>(0, 0, 0, 0)
             }
 
             var uniforms = Uniforms(

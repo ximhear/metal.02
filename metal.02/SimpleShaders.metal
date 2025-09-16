@@ -42,8 +42,9 @@ struct Uniforms {
     float4x4 viewMatrix;      // 64 bytes
     float4x4 projectionMatrix; // 64 bytes
     float time;               // 4 bytes
-    float3 padding;           // 12 bytes for 16-byte alignment
-};  // Total: 208 bytes
+    float3 padding;           // 12 bytes
+    float4 padding2;          // 16 bytes more to match Swift's 224
+};  // Total: 224 bytes to match Swift
 
 vertex VertexOut simpleVertexBufferShader(VertexIn in [[stage_in]],
                                           constant Uniforms& uniforms [[buffer(1)]]) {
