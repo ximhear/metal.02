@@ -103,7 +103,7 @@ class Renderer: NSObject {
         
         let modelMatrix = float4x4(rotationY: 0) * float4x4(rotationX: 0.0) * float4x4(rotationZ: rotation)
         
-        let viewMatrix = float4x4(translation: SIMD3<Float>(0, 0, 2))
+        let viewMatrix = float4x4(translation: SIMD3<Float>(0, 0, 4))
         
         let aspect = Float(viewportSize.width / viewportSize.height)
         let projectionMatrix: float4x4
@@ -230,4 +230,14 @@ extension float4x4 {
             [-(right + left) / ral, -(top + bottom) / tab, -near / fan, 1]
         )
     }
+    
+    init(scale: Float) {
+        self = float4x4(
+            [scale, 0, 0, 0],
+            [0, scale, 0, 0],
+            [0, 0, scale, 0],
+            [0, 0, 0, 1]
+        )
+    }
 }
+
