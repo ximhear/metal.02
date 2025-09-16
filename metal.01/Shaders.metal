@@ -46,6 +46,7 @@ vertex VertexOut vertexShader(Vertex in [[stage_in]],
     
     // 현재 색상과 다음 색상을 보간
     out.color = mix(colors[colorIndex], colors[nextColorIndex], interpolationFactor);
+    out.color = in.color; // 기존 색상 유지
 
     return out;
 }

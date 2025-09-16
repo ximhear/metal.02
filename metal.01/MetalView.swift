@@ -3,6 +3,7 @@ import MetalKit
 
 struct MetalView: UIViewRepresentable {
     @Binding var projectionMode: ProjectionMode
+    @Binding var showDebugInfo: Bool
     
     enum ProjectionMode {
         case orthographic
@@ -34,6 +35,7 @@ struct MetalView: UIViewRepresentable {
     
     func updateUIView(_ uiView: MTKView, context: Context) {
         context.coordinator.renderer?.projectionMode = projectionMode
+        context.coordinator.renderer?.isDebugMode = showDebugInfo
     }
     
     class Coordinator: NSObject, MTKViewDelegate {
