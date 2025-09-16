@@ -1,5 +1,6 @@
 import SwiftUI
 import MetalKit
+import simd
 
 struct MetalView: UIViewRepresentable {
     @Binding var projectionMode: ProjectionMode
@@ -36,15 +37,15 @@ struct MetalView: UIViewRepresentable {
         }
 
         mtkView.device = device
-        mtkView.delegate = context.coordinator  // Use coordinator as delegate
+        mtkView.delegate = context.coordinator
 
         // Configure view
         mtkView.preferredFramesPerSecond = 60
         mtkView.enableSetNeedsDisplay = false
         mtkView.isPaused = false
         mtkView.colorPixelFormat = .bgra8Unorm
-        // mtkView.depthStencilPixelFormat = .depth32Float  // Disable for debugging
-        mtkView.clearColor = MTLClearColor(red: 0.0, green: 0.0, blue: 0.5, alpha: 1.0)
+        mtkView.depthStencilPixelFormat = .depth32Float
+        mtkView.clearColor = MTLClearColor(red: 0.0, green: 0.0, blue: 0.2, alpha: 1.0)
         mtkView.sampleCount = 1
 
         // Initialize renderer in coordinator
@@ -60,7 +61,16 @@ struct MetalView: UIViewRepresentable {
     class Coordinator: NSObject, MTKViewDelegate {
         var parent: MetalView
         var pipelineState: MTLRenderPipelineState?
+        var depthState: MTLDepthStencilState?
         var commandQueue: MTLCommandQueue?
+        var vertexBuffer: MTLBuffer?
+        var indexBuffer: MTLBuffer?
+        var uniformBuffer: MTLBuffer?
+
+        var rotation: Float = 0
+        var viewportSize: CGSize = CGSize(width: 1, height: 1)
+        var vertexCount: Int = 0
+        var indexCount: Int = 0
 
         init(_ parent: MetalView) {
             self.parent = parent
@@ -71,23 +81,46 @@ struct MetalView: UIViewRepresentable {
             // Create command queue
             commandQueue = device.makeCommandQueue()
 
+            // Create buffers
+            createBuffers(device: device)
+
+            // Create depth state
+            createDepthState(device: device)
+
             // Create pipeline
             guard let library = device.makeDefaultLibrary() else {
                 print("Failed to create library")
                 return
             }
 
-            // Try to load simple shader
-            guard let vertexFunction = library.makeFunction(name: "simpleVertexShader"),
+            // Use vertex buffer shader
+            guard let vertexFunction = library.makeFunction(name: "simpleVertexBufferShader"),
                   let fragmentFunction = library.makeFunction(name: "simpleFragmentShader") else {
                 print("Failed to load shader functions")
                 return
             }
 
+            // Create vertex descriptor
+            let vertexDescriptor = MTLVertexDescriptor()
+            // Position
+            vertexDescriptor.attributes[0].format = .float3
+            vertexDescriptor.attributes[0].offset = 0
+            vertexDescriptor.attributes[0].bufferIndex = 0
+            // Color
+            vertexDescriptor.attributes[1].format = .float4
+            vertexDescriptor.attributes[1].offset = MemoryLayout<SIMD3<Float>>.stride
+            vertexDescriptor.attributes[1].bufferIndex = 0
+            // Layout
+            vertexDescriptor.layouts[0].stride = MemoryLayout<SIMD3<Float>>.stride + MemoryLayout<SIMD4<Float>>.stride
+            vertexDescriptor.layouts[0].stepRate = 1
+            vertexDescriptor.layouts[0].stepFunction = .perVertex
+
             let pipelineDescriptor = MTLRenderPipelineDescriptor()
             pipelineDescriptor.vertexFunction = vertexFunction
             pipelineDescriptor.fragmentFunction = fragmentFunction
+            pipelineDescriptor.vertexDescriptor = vertexDescriptor
             pipelineDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
+            pipelineDescriptor.depthAttachmentPixelFormat = .depth32Float
 
             do {
                 pipelineState = try device.makeRenderPipelineState(descriptor: pipelineDescriptor)
@@ -97,8 +130,117 @@ struct MetalView: UIViewRepresentable {
             }
         }
 
+        func createBuffers(device: MTLDevice) {
+            // Create cube vertices
+            let size: Float = 0.5
+
+            struct Vertex {
+                var position: SIMD3<Float>
+                var color: SIMD4<Float>
+            }
+
+            let vertices: [Vertex] = [
+                // Front face (z = size) - Red
+                Vertex(position: SIMD3<Float>(-size, -size,  size), color: SIMD4<Float>(1, 0, 0, 1)),
+                Vertex(position: SIMD3<Float>( size, -size,  size), color: SIMD4<Float>(1, 0, 0, 1)),
+                Vertex(position: SIMD3<Float>( size,  size,  size), color: SIMD4<Float>(1, 0, 0, 1)),
+                Vertex(position: SIMD3<Float>(-size,  size,  size), color: SIMD4<Float>(1, 0, 0, 1)),
+
+                // Back face (z = -size) - Green
+                Vertex(position: SIMD3<Float>(-size, -size, -size), color: SIMD4<Float>(0, 1, 0, 1)),
+                Vertex(position: SIMD3<Float>( size, -size, -size), color: SIMD4<Float>(0, 1, 0, 1)),
+                Vertex(position: SIMD3<Float>( size,  size, -size), color: SIMD4<Float>(0, 1, 0, 1)),
+                Vertex(position: SIMD3<Float>(-size,  size, -size), color: SIMD4<Float>(0, 1, 0, 1)),
+
+                // Top face (y = size) - Blue
+                Vertex(position: SIMD3<Float>(-size,  size,  size), color: SIMD4<Float>(0, 0, 1, 1)),
+                Vertex(position: SIMD3<Float>( size,  size,  size), color: SIMD4<Float>(0, 0, 1, 1)),
+                Vertex(position: SIMD3<Float>( size,  size, -size), color: SIMD4<Float>(0, 0, 1, 1)),
+                Vertex(position: SIMD3<Float>(-size,  size, -size), color: SIMD4<Float>(0, 0, 1, 1)),
+
+                // Bottom face (y = -size) - Yellow
+                Vertex(position: SIMD3<Float>(-size, -size,  size), color: SIMD4<Float>(1, 1, 0, 1)),
+                Vertex(position: SIMD3<Float>( size, -size,  size), color: SIMD4<Float>(1, 1, 0, 1)),
+                Vertex(position: SIMD3<Float>( size, -size, -size), color: SIMD4<Float>(1, 1, 0, 1)),
+                Vertex(position: SIMD3<Float>(-size, -size, -size), color: SIMD4<Float>(1, 1, 0, 1)),
+
+                // Right face (x = size) - Magenta
+                Vertex(position: SIMD3<Float>( size, -size,  size), color: SIMD4<Float>(1, 0, 1, 1)),
+                Vertex(position: SIMD3<Float>( size, -size, -size), color: SIMD4<Float>(1, 0, 1, 1)),
+                Vertex(position: SIMD3<Float>( size,  size, -size), color: SIMD4<Float>(1, 0, 1, 1)),
+                Vertex(position: SIMD3<Float>( size,  size,  size), color: SIMD4<Float>(1, 0, 1, 1)),
+
+                // Left face (x = -size) - Cyan
+                Vertex(position: SIMD3<Float>(-size, -size,  size), color: SIMD4<Float>(0, 1, 1, 1)),
+                Vertex(position: SIMD3<Float>(-size, -size, -size), color: SIMD4<Float>(0, 1, 1, 1)),
+                Vertex(position: SIMD3<Float>(-size,  size, -size), color: SIMD4<Float>(0, 1, 1, 1)),
+                Vertex(position: SIMD3<Float>(-size,  size,  size), color: SIMD4<Float>(0, 1, 1, 1))
+            ]
+
+            // Create index buffer - counter-clockwise winding
+            let indices: [UInt16] = [
+                // Front face
+                0, 1, 2,    0, 2, 3,
+                // Back face
+                4, 5, 6,    4, 6, 7,
+                // Top face
+                8, 9, 10,   8, 10, 11,
+                // Bottom face
+                12, 13, 14, 12, 14, 15,
+                // Right face
+                16, 17, 18, 16, 18, 19,
+                // Left face
+                20, 21, 22, 20, 22, 23
+            ]
+
+            vertexBuffer = device.makeBuffer(bytes: vertices,
+                                            length: vertices.count * MemoryLayout<Vertex>.stride,
+                                            options: [])
+
+            indexBuffer = device.makeBuffer(bytes: indices,
+                                           length: indices.count * MemoryLayout<UInt16>.size,
+                                           options: [])
+
+            uniformBuffer = device.makeBuffer(length: MemoryLayout<float4x4>.size * 3 + MemoryLayout<Float>.size,
+                                             options: [])
+
+            vertexCount = vertices.count
+            indexCount = indices.count
+
+            print("Created buffers: \(vertexCount) vertices, \(indexCount) indices")
+        }
+
+        func createDepthState(device: MTLDevice) {
+            let depthDescriptor = MTLDepthStencilDescriptor()
+            depthDescriptor.depthCompareFunction = .less
+            depthDescriptor.isDepthWriteEnabled = true
+            depthState = device.makeDepthStencilState(descriptor: depthDescriptor)
+        }
+
+        func updateUniforms() {
+            rotation += 0.01
+
+            // Create transformation matrices
+            let modelMatrix = float4x4(rotationY: rotation) * float4x4(rotationX: 0.3)
+            let viewMatrix = float4x4(translation: SIMD3<Float>(0, 0, -3))
+            let aspect = Float(viewportSize.width / viewportSize.height)
+            let projectionMatrix = float4x4(perspectiveLeftHanded: Float.pi / 4,
+                                           aspect,
+                                           0.1,
+                                           100.0)
+
+            // Copy to uniform buffer
+            var uniforms = [modelMatrix, viewMatrix, projectionMatrix]
+            uniformBuffer?.contents().copyMemory(from: &uniforms,
+                                                byteCount: MemoryLayout<float4x4>.size * 3)
+
+            var time = Float(CACurrentMediaTime())
+            uniformBuffer?.contents().advanced(by: MemoryLayout<float4x4>.size * 3)
+                .copyMemory(from: &time, byteCount: MemoryLayout<Float>.size)
+        }
+
         func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
-            // Will be handled by renderer
+            viewportSize = size
         }
 
         func draw(in view: MTKView) {
@@ -111,6 +253,8 @@ struct MetalView: UIViewRepresentable {
                 return
             }
 
+            updateUniforms()
+
             // Clear to dark blue
             descriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0.0, green: 0.0, blue: 0.2, alpha: 1.0)
 
@@ -119,9 +263,24 @@ struct MetalView: UIViewRepresentable {
                 return
             }
 
-            // Set pipeline and draw triangle
+            // Set pipeline and buffers
             renderEncoder.setRenderPipelineState(pipelineState)
-            renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
+            renderEncoder.setDepthStencilState(depthState)
+            renderEncoder.setFrontFacing(.counterClockwise)
+            renderEncoder.setCullMode(.back)
+
+            renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
+            renderEncoder.setVertexBuffer(uniformBuffer, offset: 0, index: 1)
+
+            // Draw indexed cube
+            if let indexBuffer = indexBuffer {
+                renderEncoder.drawIndexedPrimitives(type: .triangle,
+                                                   indexCount: indexCount,
+                                                   indexType: .uint16,
+                                                   indexBuffer: indexBuffer,
+                                                   indexBufferOffset: 0)
+            }
+
             renderEncoder.endEncoding()
 
             commandBuffer.present(drawable)
