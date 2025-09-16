@@ -59,7 +59,8 @@ struct MetalView: UIViewRepresentable {
 
     class Coordinator: NSObject, MTKViewDelegate {
         var parent: MetalView
-        var testRenderer: TestRenderer?
+        var pipelineState: MTLRenderPipelineState?
+        var commandQueue: MTLCommandQueue?
 
         init(_ parent: MetalView) {
             self.parent = parent
@@ -67,8 +68,33 @@ struct MetalView: UIViewRepresentable {
         }
 
         func setupRenderer(device: MTLDevice) {
-            // For now, keep it simple with basic test
-            // We'll switch back to advanced renderer once basic rendering works
+            // Create command queue
+            commandQueue = device.makeCommandQueue()
+
+            // Create pipeline
+            guard let library = device.makeDefaultLibrary() else {
+                print("Failed to create library")
+                return
+            }
+
+            // Try to load simple shader
+            guard let vertexFunction = library.makeFunction(name: "simpleVertexShader"),
+                  let fragmentFunction = library.makeFunction(name: "simpleFragmentShader") else {
+                print("Failed to load shader functions")
+                return
+            }
+
+            let pipelineDescriptor = MTLRenderPipelineDescriptor()
+            pipelineDescriptor.vertexFunction = vertexFunction
+            pipelineDescriptor.fragmentFunction = fragmentFunction
+            pipelineDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
+
+            do {
+                pipelineState = try device.makeRenderPipelineState(descriptor: pipelineDescriptor)
+                print("Pipeline state created successfully!")
+            } catch {
+                print("Failed to create pipeline state: \(error)")
+            }
         }
 
         func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
@@ -76,26 +102,26 @@ struct MetalView: UIViewRepresentable {
         }
 
         func draw(in view: MTKView) {
-            // Super simple inline rendering for testing
-            guard let device = view.device,
-                  let commandQueue = device.makeCommandQueue(),
+            guard let commandQueue = commandQueue,
                   let commandBuffer = commandQueue.makeCommandBuffer(),
                   let descriptor = view.currentRenderPassDescriptor,
+                  let pipelineState = pipelineState,
                   let drawable = view.currentDrawable else {
                 print("Failed to get Metal resources")
                 return
             }
 
-            // Clear to red to verify rendering is happening
-            descriptor.colorAttachments[0].clearColor = MTLClearColor(red: 1.0, green: 0.0, blue: 0.0, alpha: 1.0)
+            // Clear to dark blue
+            descriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0.0, green: 0.0, blue: 0.2, alpha: 1.0)
 
             guard let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: descriptor) else {
                 print("Failed to create render encoder")
                 return
             }
 
-            // Just end encoding without drawing anything
-            // This should at least show red screen
+            // Set pipeline and draw triangle
+            renderEncoder.setRenderPipelineState(pipelineState)
+            renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
             renderEncoder.endEncoding()
 
             commandBuffer.present(drawable)
