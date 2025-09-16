@@ -35,15 +35,18 @@ struct MetalView: UIViewRepresentable {
 
         if let device = MTLCreateSystemDefaultDevice() {
             mtkView.device = device
+            // Use simple renderer for debugging
+            context.coordinator.simpleRenderer = SimpleRenderer(device: device)
             context.coordinator.renderer = Renderer(device: device)
         }
 
         mtkView.colorPixelFormat = .bgra8Unorm
-        mtkView.depthStencilPixelFormat = .depth32Float
+        // Remove depth buffer temporarily
+        // mtkView.depthStencilPixelFormat = .depth32Float
         mtkView.clearColor = MTLClearColor(red: 0.05, green: 0.05, blue: 0.15, alpha: 1.0)
 
-        // Enable multi-sampling for smoother edges
-        mtkView.sampleCount = 4
+        // Disable MSAA temporarily
+        mtkView.sampleCount = 1
 
         return mtkView
     }
@@ -79,6 +82,7 @@ struct MetalView: UIViewRepresentable {
     class Coordinator: NSObject, MTKViewDelegate {
         var parent: MetalView
         var renderer: Renderer?
+        var simpleRenderer: SimpleRenderer?
 
         init(_ parent: MetalView) {
             self.parent = parent
@@ -90,11 +94,15 @@ struct MetalView: UIViewRepresentable {
         }
 
         func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
-            renderer?.mtkView(view, drawableSizeWillChange: size)
+            // Use simple renderer for now
+            simpleRenderer?.mtkView(view, drawableSizeWillChange: size)
+            // renderer?.mtkView(view, drawableSizeWillChange: size)
         }
 
         func draw(in view: MTKView) {
-            renderer?.draw(in: view)
+            // Use simple renderer for now
+            simpleRenderer?.draw(in: view)
+            // renderer?.draw(in: view)
         }
     }
 }
