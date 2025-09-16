@@ -58,17 +58,8 @@ vertex VertexOut vertexShader(Vertex in [[stage_in]],
 
     VertexOut out;
 
-    // Wave distortion effect
-    float wave = sin(uniforms.time * 2.0 + in.position.x * 3.0) * 0.1;
-    float wave2 = cos(uniforms.time * 1.5 + in.position.y * 2.0) * 0.1;
-    float3 distortedPosition = in.position;
-    distortedPosition.z += wave + wave2;
-
-    // Pulsating scale effect
-    float pulse = 1.0 + sin(uniforms.time * 3.0) * 0.1;
-    distortedPosition *= pulse;
-
-    float4 position = float4(distortedPosition, 1.0);
+    // Simple transformation without distortion for debugging
+    float4 position = float4(in.position, 1.0);
     float4 worldPos = uniforms.modelMatrix * position;
     float4 viewPos = uniforms.viewMatrix * worldPos;
 
@@ -140,61 +131,8 @@ vertex VertexOut particleVertexShader(Vertex in [[stage_in]],
 // Advanced fragment shader with lighting and effects
 fragment float4 fragmentShader(VertexOut in [[stage_in]],
                                constant Uniforms& uniforms [[buffer(0)]]) {
-    // Multiple light sources
-    Light lights[3];
-    lights[0].position = float3(5.0 * cos(uniforms.time), 3.0, 5.0 * sin(uniforms.time));
-    lights[0].color = float3(1.0, 0.9, 0.8);
-    lights[0].intensity = 1.2;
-
-    lights[1].position = float3(-3.0, 2.0 * sin(uniforms.time * 1.5), -3.0);
-    lights[1].color = float3(0.8, 0.4, 1.0);
-    lights[1].intensity = 0.8;
-
-    lights[2].position = float3(0.0, -2.0, 2.0 * cos(uniforms.time * 0.7));
-    lights[2].color = float3(0.4, 1.0, 0.8);
-    lights[2].intensity = 0.6;
-
-    // Calculate lighting
-    float3 finalColor = float3(0.0);
-    float3 ambient = in.color.rgb * 0.2;
-
-    for (int i = 0; i < 3; i++) {
-        float3 lightDir = normalize(lights[i].position - in.worldPosition);
-
-        // Diffuse lighting
-        float diff = max(dot(in.normal, lightDir), 0.0);
-        float3 diffuse = diff * lights[i].color * lights[i].intensity;
-
-        // Specular lighting
-        float3 reflectDir = reflect(-lightDir, in.normal);
-        float spec = pow(max(dot(in.viewDirection, reflectDir), 0.0), 32.0);
-        float3 specular = spec * lights[i].color * lights[i].intensity * 0.5;
-
-        // Rim lighting
-        float rim = 1.0 - max(dot(in.viewDirection, in.normal), 0.0);
-        rim = pow(rim, 2.0);
-        float3 rimLight = rim * lights[i].color * 0.3;
-
-        finalColor += (diffuse + specular + rimLight) * in.color.rgb;
-    }
-
-    finalColor += ambient;
-
-    // Add noise-based color variation
-    float noiseValue = noise(in.worldPosition.xy * 5.0 + uniforms.time);
-    finalColor += float3(noiseValue * 0.05);
-
-    // Fresnel effect
-    float fresnel = pow(1.0 - dot(in.viewDirection, in.normal), 2.0);
-    finalColor += float3(0.2, 0.3, 0.5) * fresnel;
-
-    // HDR tone mapping
-    finalColor = finalColor / (finalColor + float3(1.0));
-
-    // Gamma correction
-    finalColor = pow(finalColor, float3(1.0/2.2));
-
-    return float4(finalColor, in.color.a);
+    // Simple color output for debugging
+    return in.color;
 }
 
 // Glow effect fragment shader

@@ -50,8 +50,8 @@ class Renderer: NSObject {
     private var particleCount: Int = 100
 
     private var cameraRotation: Float = 0
-    private var cameraDistance: Float = 5
-    private var cameraHeight: Float = 2
+    private var cameraDistance: Float = 4
+    private var cameraHeight: Float = 1
 
     private var frameCount = 0
     private var lastFPSUpdateTime: CFTimeInterval = 0
@@ -73,6 +73,11 @@ class Renderer: NSObject {
         createCubeGeometry()
         createParticleSystem()
         buildDepthStencilState()
+
+        // Check if pipelines were created successfully
+        if pipelineState == nil {
+            print("ERROR: Main pipeline state is nil")
+        }
     }
 
     private func buildPipelines() {
@@ -158,7 +163,7 @@ class Renderer: NSObject {
         pipelineDescriptor.vertexDescriptor = vertexDescriptor
         pipelineDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
         pipelineDescriptor.depthAttachmentPixelFormat = .depth32Float
-        pipelineDescriptor.sampleCount = 4  // Match MTKView's sample count
+        pipelineDescriptor.rasterSampleCount = 4  // Match MTKView's sample count
 
         if enableBlending {
             pipelineDescriptor.colorAttachments[0].isBlendingEnabled = true
@@ -225,20 +230,20 @@ class Renderer: NSObject {
             Vertex(position: SIMD3<Float>(-size,  size,  size), color: SIMD4<Float>(0.3, 0.6, 0.6, 1), normal: SIMD3<Float>(-1, 0, 0), texCoord: SIMD2<Float>(1, 1))
         ]
 
-        // Create index buffer for cube faces
+        // Create index buffer for cube faces (counter-clockwise winding)
         let indices: [UInt16] = [
             // Front face
             0, 1, 2,    0, 2, 3,
             // Back face
-            4, 6, 5,    4, 7, 6,
+            4, 5, 6,    4, 6, 7,
             // Top face
             8, 9, 10,   8, 10, 11,
             // Bottom face
-            12, 14, 13, 12, 15, 14,
+            12, 13, 14, 12, 14, 15,
             // Right face
             16, 17, 18, 16, 18, 19,
             // Left face
-            20, 22, 21, 20, 23, 22
+            20, 21, 22, 20, 22, 23
         ]
 
         vertexBuffer = device.makeBuffer(bytes: vertices,
@@ -425,15 +430,11 @@ class Renderer: NSObject {
         let camZ = cos(cameraRotation) * cameraDistance
         let cameraPosition = SIMD3<Float>(camX, cameraHeight + sin(rotation * 0.5), camZ)
 
-        // Create model matrix with multiple rotations
-        let modelMatrix = float4x4(rotationY: rotation * 0.7) *
-                         float4x4(rotationX: rotation * 0.5) *
-                         float4x4(rotationZ: rotation * 0.3)
+        // Simpler model matrix for debugging
+        let modelMatrix = float4x4(rotationY: rotation) * float4x4(scale: 0.5)
 
-        // Look-at view matrix
-        let viewMatrix = float4x4(lookAt: cameraPosition,
-                                  target: SIMD3<Float>(0, 0, 0),
-                                  up: SIMD3<Float>(0, 1, 0))
+        // Simple translation view matrix for debugging
+        let viewMatrix = float4x4(translation: SIMD3<Float>(0, 0, -4))
 
         let aspect = Float(viewportSize.width / viewportSize.height)
         let projectionMatrix: float4x4
@@ -446,7 +447,7 @@ class Renderer: NSObject {
                                        -orthoHeight/2, orthoHeight/2,
                                        0.1, 100.0)
         case .perspective:
-            projectionMatrix = float4x4(perspectiveLeftHanded: Float.pi / 3.5,
+            projectionMatrix = float4x4(perspectiveLeftHanded: Float.pi / 4,
                                        aspect,
                                        0.1,
                                        100.0)
@@ -516,23 +517,15 @@ extension Renderer: MTKViewDelegate {
 
         renderEncoder.setDepthStencilState(depthState)
         renderEncoder.setFrontFacing(.counterClockwise)
-        renderEncoder.setCullMode(.back)
+        renderEncoder.setCullMode(.none)  // Disable culling temporarily to debug
 
         // Render main geometry
         if renderMode != .particles {
-            // First pass: Render with hologram effect
-            renderEncoder.setRenderPipelineState(hologramPipelineState!)
+            // Only render main pipeline for debugging
+            renderEncoder.setRenderPipelineState(pipelineState!)
             renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
             renderEncoder.setVertexBuffer(uniformBuffer, offset: 0, index: 1)
             renderEncoder.setFragmentBuffer(uniformBuffer, offset: 0, index: 0)
-            renderEncoder.drawIndexedPrimitives(type: .triangle,
-                                               indexCount: currentIndexCount,
-                                               indexType: .uint16,
-                                               indexBuffer: indexBuffer!,
-                                               indexBufferOffset: 0)
-
-            // Second pass: Render with main lighting
-            renderEncoder.setRenderPipelineState(pipelineState!)
             renderEncoder.drawIndexedPrimitives(type: .triangle,
                                                indexCount: currentIndexCount,
                                                indexType: .uint16,
@@ -657,6 +650,15 @@ extension float4x4 {
             [0, 2.0 / tab, 0, 0],
             [0, 0, 1.0 / fan, 0],
             [-(right + left) / ral, -(top + bottom) / tab, -near / fan, 1]
+        )
+    }
+
+    init(scale: Float) {
+        self = float4x4(
+            [scale, 0, 0, 0],
+            [0, scale, 0, 0],
+            [0, 0, scale, 0],
+            [0, 0, 0, 1]
         )
     }
 
