@@ -35,13 +35,18 @@ struct MetalView: UIViewRepresentable {
 
         if let device = MTLCreateSystemDefaultDevice() {
             mtkView.device = device
-            // Use simple renderer for debugging
-            context.coordinator.simpleRenderer = SimpleRenderer(device: device)
-            context.coordinator.renderer = Renderer(device: device)
+            // Use test renderer for simplest debugging
+            if let testRenderer = TestRenderer(metalView: mtkView) {
+                mtkView.delegate = testRenderer
+            } else {
+                print("Failed to create test renderer")
+            }
+            // context.coordinator.simpleRenderer = SimpleRenderer(device: device)
+            // context.coordinator.renderer = Renderer(device: device)
         }
 
         mtkView.colorPixelFormat = .bgra8Unorm
-        mtkView.depthStencilPixelFormat = .depth32Float
+        // mtkView.depthStencilPixelFormat = .depth32Float  // Disable for debugging
         mtkView.clearColor = MTLClearColor(red: 0.05, green: 0.05, blue: 0.15, alpha: 1.0)
 
         // Keep MSAA disabled for now

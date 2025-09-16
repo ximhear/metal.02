@@ -48,9 +48,12 @@ class SimpleRenderer: NSObject {
             return
         }
 
-        // Try new shaders first
-        let vertexFunction = library.makeFunction(name: "simpleVertexBufferShader") ?? library.makeFunction(name: "simpleVertexShader")
-        let fragmentFunction = library.makeFunction(name: "simpleFragmentShader")
+        // Use simple shader for now to verify it works
+        guard let vertexFunction = library.makeFunction(name: "simpleVertexShader"),
+              let fragmentFunction = library.makeFunction(name: "simpleFragmentShader") else {
+            print("Failed to load shader functions")
+            return
+        }
 
         let vertexDescriptor = MTLVertexDescriptor()
         // Position
@@ -69,9 +72,10 @@ class SimpleRenderer: NSObject {
         let pipelineDescriptor = MTLRenderPipelineDescriptor()
         pipelineDescriptor.vertexFunction = vertexFunction
         pipelineDescriptor.fragmentFunction = fragmentFunction
-        pipelineDescriptor.vertexDescriptor = vertexDescriptor
+        // Don't use vertex descriptor for simple shader
+        // pipelineDescriptor.vertexDescriptor = vertexDescriptor
         pipelineDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
-        pipelineDescriptor.depthAttachmentPixelFormat = .depth32Float
+        // pipelineDescriptor.depthAttachmentPixelFormat = .depth32Float
         pipelineDescriptor.rasterSampleCount = 1
 
         do {
@@ -214,22 +218,12 @@ extension SimpleRenderer: MTKViewDelegate {
         }
 
         renderEncoder.setRenderPipelineState(pipelineState)
-        renderEncoder.setDepthStencilState(depthState)
-        renderEncoder.setFrontFacing(.counterClockwise)
-        renderEncoder.setCullMode(.back)
+        // renderEncoder.setDepthStencilState(depthState)
+        // renderEncoder.setFrontFacing(.counterClockwise)
+        // renderEncoder.setCullMode(.back)
 
-        // Set vertex buffer and uniforms
-        renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
-        renderEncoder.setVertexBuffer(uniformBuffer, offset: 0, index: 1)
-
-        // Draw indexed primitives
-        if let indexBuffer = indexBuffer {
-            renderEncoder.drawIndexedPrimitives(type: .triangle,
-                                               indexCount: indexCount,
-                                               indexType: .uint16,
-                                               indexBuffer: indexBuffer,
-                                               indexBufferOffset: 0)
-        }
+        // Draw simple triangle without vertex buffer
+        renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
 
         renderEncoder.endEncoding()
 
