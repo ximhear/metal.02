@@ -42,6 +42,7 @@ struct Uniforms {
     float4x4 viewMatrix;
     float4x4 projectionMatrix;
     float time;
+    float3 padding;  // Padding for 16-byte alignment
 };
 
 vertex VertexOut simpleVertexBufferShader(VertexIn in [[stage_in]],

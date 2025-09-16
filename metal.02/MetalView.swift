@@ -201,8 +201,10 @@ struct MetalView: UIViewRepresentable {
                                            length: indices.count * MemoryLayout<UInt16>.size,
                                            options: [])
 
-            uniformBuffer = device.makeBuffer(length: MemoryLayout<float4x4>.size * 3 + MemoryLayout<Float>.size,
-                                             options: [])
+            // Uniforms struct size: 3 matrices (64 bytes each) + 1 float (4 bytes) = 196 bytes
+            // But Metal requires 16-byte alignment, so time field needs padding
+            let uniformsSize = MemoryLayout<float4x4>.size * 3 + 16  // 192 + 16 = 208 for alignment
+            uniformBuffer = device.makeBuffer(length: uniformsSize, options: [])
 
             vertexCount = vertices.count
             indexCount = indices.count
@@ -229,14 +231,24 @@ struct MetalView: UIViewRepresentable {
                                            0.1,
                                            100.0)
 
-            // Copy to uniform buffer
-            var uniforms = [modelMatrix, viewMatrix, projectionMatrix]
-            uniformBuffer?.contents().copyMemory(from: &uniforms,
-                                                byteCount: MemoryLayout<float4x4>.size * 3)
+            // Create uniforms struct matching shader layout
+            struct Uniforms {
+                var modelMatrix: float4x4
+                var viewMatrix: float4x4
+                var projectionMatrix: float4x4
+                var time: Float
+                var padding: SIMD3<Float> = SIMD3<Float>(0, 0, 0)  // Padding for 16-byte alignment
+            }
 
-            var time = Float(CACurrentMediaTime())
-            uniformBuffer?.contents().advanced(by: MemoryLayout<float4x4>.size * 3)
-                .copyMemory(from: &time, byteCount: MemoryLayout<Float>.size)
+            var uniforms = Uniforms(
+                modelMatrix: modelMatrix,
+                viewMatrix: viewMatrix,
+                projectionMatrix: projectionMatrix,
+                time: Float(CACurrentMediaTime())
+            )
+
+            uniformBuffer?.contents().copyMemory(from: &uniforms,
+                                                byteCount: MemoryLayout<Uniforms>.size)
         }
 
         func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
