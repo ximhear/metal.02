@@ -158,6 +158,7 @@ class Renderer: NSObject {
         pipelineDescriptor.vertexDescriptor = vertexDescriptor
         pipelineDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
         pipelineDescriptor.depthAttachmentPixelFormat = .depth32Float
+        pipelineDescriptor.sampleCount = 4  // Match MTKView's sample count
 
         if enableBlending {
             pipelineDescriptor.colorAttachments[0].isBlendingEnabled = true
