@@ -38,12 +38,12 @@ struct VertexOut {
 };
 
 struct Uniforms {
-    float4x4 modelMatrix;
-    float4x4 viewMatrix;
-    float4x4 projectionMatrix;
-    float time;
-    float3 padding;  // Padding for 16-byte alignment
-};
+    float4x4 modelMatrix;     // 64 bytes
+    float4x4 viewMatrix;      // 64 bytes
+    float4x4 projectionMatrix; // 64 bytes
+    float time;               // 4 bytes
+    float3 padding;           // 12 bytes for 16-byte alignment
+};  // Total: 208 bytes
 
 vertex VertexOut simpleVertexBufferShader(VertexIn in [[stage_in]],
                                           constant Uniforms& uniforms [[buffer(1)]]) {

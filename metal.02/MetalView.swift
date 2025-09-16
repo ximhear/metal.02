@@ -81,6 +81,17 @@ struct MetalView: UIViewRepresentable {
             // Create command queue
             commandQueue = device.makeCommandQueue()
 
+            // Debug: Check actual struct size
+            struct TestUniforms {
+                var modelMatrix: float4x4
+                var viewMatrix: float4x4
+                var projectionMatrix: float4x4
+                var time: Float
+                var padding: SIMD3<Float>
+            }
+            print("Swift Uniforms size: \(MemoryLayout<TestUniforms>.size)")
+            print("Swift Uniforms stride: \(MemoryLayout<TestUniforms>.stride)")
+
             // Create buffers
             createBuffers(device: device)
 
@@ -201,10 +212,18 @@ struct MetalView: UIViewRepresentable {
                                            length: indices.count * MemoryLayout<UInt16>.size,
                                            options: [])
 
-            // Uniforms struct size: 3 matrices (64 bytes each) + 1 float (4 bytes) = 196 bytes
-            // But Metal requires 16-byte alignment, so time field needs padding
-            let uniformsSize = MemoryLayout<float4x4>.size * 3 + 16  // 192 + 16 = 208 for alignment
+            // Use actual struct size to ensure proper alignment
+            struct Uniforms {
+                var modelMatrix: float4x4
+                var viewMatrix: float4x4
+                var projectionMatrix: float4x4
+                var time: Float
+                var padding: SIMD3<Float> = SIMD3<Float>(0, 0, 0)
+            }
+
+            let uniformsSize = MemoryLayout<Uniforms>.stride  // Use stride for proper alignment
             uniformBuffer = device.makeBuffer(length: uniformsSize, options: [])
+            print("Allocated uniform buffer size: \(uniformsSize) bytes")
 
             vertexCount = vertices.count
             indexCount = indices.count
@@ -237,7 +256,7 @@ struct MetalView: UIViewRepresentable {
                 var viewMatrix: float4x4
                 var projectionMatrix: float4x4
                 var time: Float
-                var padding: SIMD3<Float> = SIMD3<Float>(0, 0, 0)  // Padding for 16-byte alignment
+                var padding: SIMD3<Float> = SIMD3<Float>(0, 0, 0)
             }
 
             var uniforms = Uniforms(
@@ -248,7 +267,7 @@ struct MetalView: UIViewRepresentable {
             )
 
             uniformBuffer?.contents().copyMemory(from: &uniforms,
-                                                byteCount: MemoryLayout<Uniforms>.size)
+                                                byteCount: MemoryLayout<Uniforms>.stride)  // Use stride instead of size
         }
 
         func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
