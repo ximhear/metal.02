@@ -7,13 +7,13 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		ECA6888C2E70862D00ABA168 /* metal.01.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = metal.01.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		ECA6888C2E70862D00ABA168 /* metal.02.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = metal.02.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		ECA6888E2E70862D00ABA168 /* metal.01 */ = {
+		ECA6888E2E70862D00ABA168 /* metal.02 */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = metal.01;
+			path = metal.02;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -32,7 +32,7 @@
 		ECA688832E70862D00ABA168 = {
 			isa = PBXGroup;
 			children = (
-				ECA6888E2E70862D00ABA168 /* metal.01 */,
+				ECA6888E2E70862D00ABA168 /* metal.02 */,
 				ECA6888D2E70862D00ABA168 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -40,7 +40,7 @@
 		ECA6888D2E70862D00ABA168 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				ECA6888C2E70862D00ABA168 /* metal.01.app */,
+				ECA6888C2E70862D00ABA168 /* metal.02.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,9 +48,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		ECA6888B2E70862D00ABA168 /* metal.01 */ = {
+		ECA6888B2E70862D00ABA168 /* metal.02 */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = ECA688972E70862E00ABA168 /* Build configuration list for PBXNativeTarget "metal.01" */;
+			buildConfigurationList = ECA688972E70862E00ABA168 /* Build configuration list for PBXNativeTarget "metal.02" */;
 			buildPhases = (
 				ECA688882E70862D00ABA168 /* Sources */,
 				ECA688892E70862D00ABA168 /* Frameworks */,
@@ -61,13 +61,13 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				ECA6888E2E70862D00ABA168 /* metal.01 */,
+				ECA6888E2E70862D00ABA168 /* metal.02 */,
 			);
-			name = metal.01;
+			name = metal.02;
 			packageProductDependencies = (
 			);
-			productName = metal.01;
-			productReference = ECA6888C2E70862D00ABA168 /* metal.01.app */;
+			productName = metal.02;
+			productReference = ECA6888C2E70862D00ABA168 /* metal.02.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -85,7 +85,7 @@
 					};
 				};
 			};
-			buildConfigurationList = ECA688872E70862D00ABA168 /* Build configuration list for PBXProject "metal.01" */;
+			buildConfigurationList = ECA688872E70862D00ABA168 /* Build configuration list for PBXProject "metal.02" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -99,7 +99,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				ECA6888B2E70862D00ABA168 /* metal.01 */,
+				ECA6888B2E70862D00ABA168 /* metal.02 */,
 			);
 		};
 /* End PBXProject section */
@@ -315,7 +315,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		ECA688872E70862D00ABA168 /* Build configuration list for PBXProject "metal.01" */ = {
+		ECA688872E70862D00ABA168 /* Build configuration list for PBXProject "metal.02" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				ECA688952E70862E00ABA168 /* Debug */,
@@ -324,7 +324,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		ECA688972E70862E00ABA168 /* Build configuration list for PBXNativeTarget "metal.01" */ = {
+		ECA688972E70862E00ABA168 /* Build configuration list for PBXNativeTarget "metal.02" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				ECA688982E70862E00ABA168 /* Debug */,
