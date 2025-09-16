@@ -105,8 +105,8 @@ struct MetalView: UIViewRepresentable {
                 return
             }
 
-            // Use simple shader first for testing
-            guard let vertexFunction = library.makeFunction(name: "simpleVertexShader"),
+            // Use vertex buffer shader
+            guard let vertexFunction = library.makeFunction(name: "simpleVertexBufferShader"),
                   let fragmentFunction = library.makeFunction(name: "simpleFragmentShader") else {
                 print("Failed to load shader functions")
                 return
@@ -130,9 +130,9 @@ struct MetalView: UIViewRepresentable {
             let pipelineDescriptor = MTLRenderPipelineDescriptor()
             pipelineDescriptor.vertexFunction = vertexFunction
             pipelineDescriptor.fragmentFunction = fragmentFunction
-            // Don't use vertex descriptor for simple shader
-            // pipelineDescriptor.vertexDescriptor = vertexDescriptor
+            pipelineDescriptor.vertexDescriptor = vertexDescriptor  // Enable vertex descriptor
             pipelineDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
+            // Keep depth disabled for now
             // pipelineDescriptor.depthAttachmentPixelFormat = .depth32Float
 
             do {
@@ -305,15 +305,15 @@ struct MetalView: UIViewRepresentable {
             renderEncoder.setFrontFacing(.counterClockwise)
             renderEncoder.setCullMode(.none)  // Disable culling
 
-            // First, try simple triangle without buffers
-            renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
-
-            // Comment out cube drawing for now
-            /*
+            // Use vertex buffer rendering
             renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
             renderEncoder.setVertexBuffer(uniformBuffer, offset: 0, index: 1)
 
-            // Draw indexed cube
+            // Draw first 3 vertices as triangle to test
+            renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
+
+            // Later we'll use indexed drawing for full cube
+            /*
             if let indexBuffer = indexBuffer {
                 renderEncoder.drawIndexedPrimitives(type: .triangle,
                                                    indexCount: indexCount,
