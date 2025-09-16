@@ -41,11 +41,10 @@ struct MetalView: UIViewRepresentable {
         }
 
         mtkView.colorPixelFormat = .bgra8Unorm
-        // Remove depth buffer temporarily
-        // mtkView.depthStencilPixelFormat = .depth32Float
+        mtkView.depthStencilPixelFormat = .depth32Float
         mtkView.clearColor = MTLClearColor(red: 0.05, green: 0.05, blue: 0.15, alpha: 1.0)
 
-        // Disable MSAA temporarily
+        // Keep MSAA disabled for now
         mtkView.sampleCount = 1
 
         return mtkView

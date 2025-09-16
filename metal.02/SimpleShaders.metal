@@ -1,6 +1,7 @@
 #include <metal_stdlib>
 using namespace metal;
 
+// For hardcoded triangle (original test)
 struct SimpleVertex {
     float4 position [[position]];
     float4 color;
@@ -25,6 +26,37 @@ vertex SimpleVertex simpleVertexShader(uint vertexID [[vertex_id]]) {
     return out;
 }
 
-fragment float4 simpleFragmentShader(SimpleVertex in [[stage_in]]) {
+// For vertex buffer rendering
+struct VertexIn {
+    float3 position [[attribute(0)]];
+    float4 color [[attribute(1)]];
+};
+
+struct VertexOut {
+    float4 position [[position]];
+    float4 color;
+};
+
+struct Uniforms {
+    float4x4 modelMatrix;
+    float4x4 viewMatrix;
+    float4x4 projectionMatrix;
+    float time;
+};
+
+vertex VertexOut simpleVertexBufferShader(VertexIn in [[stage_in]],
+                                          constant Uniforms& uniforms [[buffer(1)]]) {
+    VertexOut out;
+
+    float4 position = float4(in.position, 1.0);
+    float4 worldPos = uniforms.modelMatrix * position;
+    float4 viewPos = uniforms.viewMatrix * worldPos;
+    out.position = uniforms.projectionMatrix * viewPos;
+    out.color = in.color;
+
+    return out;
+}
+
+fragment float4 simpleFragmentShader(VertexOut in [[stage_in]]) {
     return in.color;
 }
