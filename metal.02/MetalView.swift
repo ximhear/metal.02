@@ -28,85 +28,78 @@ struct MetalView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> MTKView {
         let mtkView = MTKView()
-        mtkView.delegate = context.coordinator
+
+        // Set up Metal device
+        guard let device = MTLCreateSystemDefaultDevice() else {
+            print("Metal is not supported on this device")
+            return mtkView
+        }
+
+        mtkView.device = device
+        mtkView.delegate = context.coordinator  // Use coordinator as delegate
+
+        // Configure view
         mtkView.preferredFramesPerSecond = 60
         mtkView.enableSetNeedsDisplay = false
         mtkView.isPaused = false
-
-        if let device = MTLCreateSystemDefaultDevice() {
-            mtkView.device = device
-            // Use test renderer for simplest debugging
-            if let testRenderer = TestRenderer(metalView: mtkView) {
-                mtkView.delegate = testRenderer
-            } else {
-                print("Failed to create test renderer")
-            }
-            // context.coordinator.simpleRenderer = SimpleRenderer(device: device)
-            // context.coordinator.renderer = Renderer(device: device)
-        }
-
         mtkView.colorPixelFormat = .bgra8Unorm
         // mtkView.depthStencilPixelFormat = .depth32Float  // Disable for debugging
-        mtkView.clearColor = MTLClearColor(red: 0.05, green: 0.05, blue: 0.15, alpha: 1.0)
-
-        // Keep MSAA disabled for now
+        mtkView.clearColor = MTLClearColor(red: 0.0, green: 0.0, blue: 0.5, alpha: 1.0)
         mtkView.sampleCount = 1
+
+        // Initialize renderer in coordinator
+        context.coordinator.setupRenderer(device: device)
 
         return mtkView
     }
 
     func updateUIView(_ uiView: MTKView, context: Context) {
-        guard let renderer = context.coordinator.renderer else { return }
-
-        renderer.projectionMode = projectionMode
-        renderer.isDebugMode = showDebugInfo
-
-        // Update render mode
-        switch renderMode {
-        case .cube:
-            renderer.switchToCube()
-        case .sphere:
-            renderer.switchToSphere()
-        case .torus:
-            renderer.switchToTorus()
-        case .particles:
-            renderer.switchToParticles()
-        case .combined:
-            renderer.switchToCombined()
-        }
-
-        // Update dynamic parameters
-        context.coordinator.updateDynamicParameters(
-            particleCount: Int(particleCount),
-            rotationSpeed: Float(rotationSpeed),
-            cameraDistance: Float(cameraDistance)
-        )
+        // Update renderer properties if needed
     }
 
     class Coordinator: NSObject, MTKViewDelegate {
         var parent: MetalView
-        var renderer: Renderer?
-        var simpleRenderer: SimpleRenderer?
+        var testRenderer: TestRenderer?
 
         init(_ parent: MetalView) {
             self.parent = parent
+            super.init()
         }
 
-        func updateDynamicParameters(particleCount: Int, rotationSpeed: Float, cameraDistance: Float) {
-            // These would be passed to the renderer if we exposed them as properties
-            // For now they're handled internally in the renderer
+        func setupRenderer(device: MTLDevice) {
+            // For now, keep it simple with basic test
+            // We'll switch back to advanced renderer once basic rendering works
         }
 
         func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
-            // Use simple renderer for now
-            simpleRenderer?.mtkView(view, drawableSizeWillChange: size)
-            // renderer?.mtkView(view, drawableSizeWillChange: size)
+            // Will be handled by renderer
         }
 
         func draw(in view: MTKView) {
-            // Use simple renderer for now
-            simpleRenderer?.draw(in: view)
-            // renderer?.draw(in: view)
+            // Super simple inline rendering for testing
+            guard let device = view.device,
+                  let commandQueue = device.makeCommandQueue(),
+                  let commandBuffer = commandQueue.makeCommandBuffer(),
+                  let descriptor = view.currentRenderPassDescriptor,
+                  let drawable = view.currentDrawable else {
+                print("Failed to get Metal resources")
+                return
+            }
+
+            // Clear to red to verify rendering is happening
+            descriptor.colorAttachments[0].clearColor = MTLClearColor(red: 1.0, green: 0.0, blue: 0.0, alpha: 1.0)
+
+            guard let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: descriptor) else {
+                print("Failed to create render encoder")
+                return
+            }
+
+            // Just end encoding without drawing anything
+            // This should at least show red screen
+            renderEncoder.endEncoding()
+
+            commandBuffer.present(drawable)
+            commandBuffer.commit()
         }
     }
 }
