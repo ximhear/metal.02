@@ -104,8 +104,8 @@ struct MetalView: UIViewRepresentable {
                 return
             }
 
-            // Use vertex buffer shader
-            guard let vertexFunction = library.makeFunction(name: "simpleVertexBufferShader"),
+            // Use simple shader first for testing
+            guard let vertexFunction = library.makeFunction(name: "simpleVertexShader"),
                   let fragmentFunction = library.makeFunction(name: "simpleFragmentShader") else {
                 print("Failed to load shader functions")
                 return
@@ -129,9 +129,10 @@ struct MetalView: UIViewRepresentable {
             let pipelineDescriptor = MTLRenderPipelineDescriptor()
             pipelineDescriptor.vertexFunction = vertexFunction
             pipelineDescriptor.fragmentFunction = fragmentFunction
-            pipelineDescriptor.vertexDescriptor = vertexDescriptor
+            // Don't use vertex descriptor for simple shader
+            // pipelineDescriptor.vertexDescriptor = vertexDescriptor
             pipelineDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
-            pipelineDescriptor.depthAttachmentPixelFormat = .depth32Float
+            // pipelineDescriptor.depthAttachmentPixelFormat = .depth32Float
 
             do {
                 pipelineState = try device.makeRenderPipelineState(descriptor: pipelineDescriptor)
@@ -298,10 +299,16 @@ struct MetalView: UIViewRepresentable {
 
             // Set pipeline and buffers
             renderEncoder.setRenderPipelineState(pipelineState)
-            renderEncoder.setDepthStencilState(depthState)
+            // Disable depth and culling for testing
+            // renderEncoder.setDepthStencilState(depthState)
             renderEncoder.setFrontFacing(.counterClockwise)
-            renderEncoder.setCullMode(.back)
+            renderEncoder.setCullMode(.none)  // Disable culling
 
+            // First, try simple triangle without buffers
+            renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
+
+            // Comment out cube drawing for now
+            /*
             renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
             renderEncoder.setVertexBuffer(uniformBuffer, offset: 0, index: 1)
 
@@ -313,6 +320,7 @@ struct MetalView: UIViewRepresentable {
                                                    indexBuffer: indexBuffer,
                                                    indexBufferOffset: 0)
             }
+            */
 
             renderEncoder.endEncoding()
 
