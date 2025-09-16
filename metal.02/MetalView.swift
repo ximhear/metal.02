@@ -105,10 +105,28 @@ struct MetalView: UIViewRepresentable {
                 return
             }
 
-            // Use vertex buffer shader
-            guard let vertexFunction = library.makeFunction(name: "simpleVertexBufferShader"),
-                  let fragmentFunction = library.makeFunction(name: "simpleFragmentShader") else {
-                print("Failed to load shader functions")
+            // Use basic buffer shader for testing
+            guard let vertexFunction = library.makeFunction(name: "basicVertexShader"),
+                  let fragmentFunction = library.makeFunction(name: "basicFragmentShader") else {
+                print("Failed to load shader functions - trying simpleVertexShader")
+                // Fallback to simple shader
+                guard let vertexFunction = library.makeFunction(name: "simpleVertexShader"),
+                      let fragmentFunction = library.makeFunction(name: "simpleFragmentShader") else {
+                    print("Failed to load any shader functions")
+                    return
+                }
+                // Use simple non-buffer shader
+                let pipelineDescriptor = MTLRenderPipelineDescriptor()
+                pipelineDescriptor.vertexFunction = vertexFunction
+                pipelineDescriptor.fragmentFunction = fragmentFunction
+                pipelineDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
+
+                do {
+                    pipelineState = try device.makeRenderPipelineState(descriptor: pipelineDescriptor)
+                    print("Created simple pipeline state")
+                } catch {
+                    print("Failed to create pipeline state: \(error)")
+                }
                 return
             }
 
@@ -144,14 +162,28 @@ struct MetalView: UIViewRepresentable {
         }
 
         func createBuffers(device: MTLDevice) {
-            // Create cube vertices
-            let size: Float = 0.5
-
+            // Create simple triangle vertices in NDC space (-1 to 1)
             struct Vertex {
                 var position: SIMD3<Float>
                 var color: SIMD4<Float>
             }
 
+            // Simple triangle in screen space
+            let simpleVertices: [Vertex] = [
+                Vertex(position: SIMD3<Float>( 0.0,  0.5, 0.0), color: SIMD4<Float>(1, 0, 0, 1)),  // Top - Red
+                Vertex(position: SIMD3<Float>(-0.5, -0.5, 0.0), color: SIMD4<Float>(0, 1, 0, 1)),  // Bottom left - Green
+                Vertex(position: SIMD3<Float>( 0.5, -0.5, 0.0), color: SIMD4<Float>(0, 0, 1, 1))   // Bottom right - Blue
+            ]
+
+            vertexBuffer = device.makeBuffer(bytes: simpleVertices,
+                                            length: simpleVertices.count * MemoryLayout<Vertex>.stride,
+                                            options: [])
+
+            vertexCount = simpleVertices.count
+            print("Created simple triangle buffer with \(vertexCount) vertices")
+
+            // Keep cube vertices for later
+            let size: Float = 0.5
             let vertices: [Vertex] = [
                 // Front face (z = size) - Red
                 Vertex(position: SIMD3<Float>(-size, -size,  size), color: SIMD4<Float>(1, 0, 0, 1)),
@@ -305,12 +337,21 @@ struct MetalView: UIViewRepresentable {
             renderEncoder.setFrontFacing(.counterClockwise)
             renderEncoder.setCullMode(.none)  // Disable culling
 
-            // Use vertex buffer rendering
-            renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
-            renderEncoder.setVertexBuffer(uniformBuffer, offset: 0, index: 1)
+            // Check if we're using buffer pipeline
+            if vertexBuffer != nil {
+                // Use vertex buffer rendering
+                renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
+                // Don't set uniform buffer for basic test
+                // renderEncoder.setVertexBuffer(uniformBuffer, offset: 0, index: 1)
 
-            // Draw first 3 vertices as triangle to test
-            renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
+                // Draw triangle from buffer
+                renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
+                print("Drawing with vertex buffer")
+            } else {
+                // Fallback to simple triangle
+                renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
+                print("Drawing without vertex buffer")
+            }
 
             // Later we'll use indexed drawing for full cube
             /*
